@@ -1,4 +1,4 @@
-package com.felipeserver.site.glyph.room
+package com.felipeserver.site.glyph.data.local
 
 import androidx.room.Dao
 import androidx.room.Delete
@@ -20,6 +20,9 @@ interface NoteDao {
 
     @Query("SELECT * FROM notes")
     fun getAllNotes(): Flow<List<NoteEntity>>
+
+    @Query("SELECT * FROM notes WHERE id = :id")
+    fun getNoteById(id: Int): Flow<NoteEntity>
 
 
 }

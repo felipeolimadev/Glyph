@@ -1,4 +1,5 @@
-package com.felipeserver.site.glyph.room
+package com.felipeserver.site.glyph.data.local
+
 import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
@@ -23,9 +24,4 @@ abstract class NoteDatabase : RoomDatabase() {
             }
         }
     }
-
-
-
 }
-
-

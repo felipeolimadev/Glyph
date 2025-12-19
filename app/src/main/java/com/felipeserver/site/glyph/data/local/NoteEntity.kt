@@ -1,4 +1,4 @@
-package com.felipeserver.site.glyph.room
+package com.felipeserver.site.glyph.data.local
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
