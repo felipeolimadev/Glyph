@@ -10,5 +10,14 @@
         </BuiltInPromptOverride>
       </list>
     </option>
+    <option name="prompts">
+      <list>
+        <PromptTemplate>
+          <option name="enabled" value="true" />
+          <option name="name" value="Language" />
+          <option name="text" value="Think in English and answer in portuguese" />
+        </PromptTemplate>
+      </list>
+    </option>
   </component>
 </project>

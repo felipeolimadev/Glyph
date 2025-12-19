@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -21,7 +22,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.layout.ModifierLocalBeyondBoundsLayout
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -41,7 +41,7 @@ fun MainViewScreen(viewModel: NoteViewModel = viewModel()) {
 }
 
 // Pure UI composable that can be previewed
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun MainView(notes: List<NoteEntity> = emptyList()) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
@@ -58,11 +58,13 @@ fun MainView(notes: List<NoteEntity> = emptyList()) {
                 ),
                 title = {
                     Text(
-                        "Large Top App Barr",
+                        "Glyph",
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.displayLargeEmphasized
                     )
-                }
+                },
+                scrollBehavior = scrollBehavior
             )
         }
     ) { innerPadding ->
@@ -78,35 +80,21 @@ fun MainView(notes: List<NoteEntity> = emptyList()) {
                 )
             }
         }
-        Column(
-            modifier = Modifier
-                .padding(innerPadding)
-        ) { }
-
     }
-
-
 }
 
 
 @Composable
 @Preview(showBackground = true)
 fun MainViewPreview() {
-    // Use sample data for preview instead of ViewModel
-    val sampleNotes = listOf(
+    val sampleNotes = (1..15).map {
         NoteEntity(
-            id = 1,
-            title = "Sample Note Title",
+            id = it,
+            title = "Sample Note Title $it",
             content = "This is a sample note content for preview purposes.",
             timeStamp = System.currentTimeMillis()
-        ),
-        NoteEntity(
-            id = 2,
-            title = "Another Note",
-            content = "More sample content to demonstrate the preview.",
-            timeStamp = System.currentTimeMillis()
         )
-    )
+    }
     MainView(notes = sampleNotes)
 
 
@@ -118,7 +106,6 @@ fun NoteCard(title: String, content: String, date: String) {
     Column(
         modifier = Modifier
             .padding(16.dp)
-            .fillMaxSize()
             .fillMaxWidth()
             .height(100.dp)
 
