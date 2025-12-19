@@ -21,17 +21,29 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ModifierLocalBeyondBoundsLayout
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.felipeserver.site.glyph.room.NoteEntity
 import com.felipeserver.site.glyph.room.NoteViewModel
 import kotlin.collections.emptyList
 
 
+// Wrapper composable that uses the ViewModel - use this in your Activity/NavGraph
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainView() {
+fun MainViewScreen(viewModel: NoteViewModel = viewModel()) {
+    val notes by viewModel.notes.collectAsState()
+    MainView(notes = notes)
+}
+
+// Pure UI composable that can be previewed
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MainView(notes: List<NoteEntity> = emptyList()) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
 
     Scaffold(
@@ -54,6 +66,18 @@ fun MainView() {
             )
         }
     ) { innerPadding ->
+        LazyColumn(
+            modifier = Modifier
+                .padding(innerPadding)
+        ) {
+            items(notes) { individualNote ->
+                NoteCard(
+                    title = individualNote.title,
+                    content = individualNote.content,
+                    date = individualNote.timeStamp.toString()
+                )
+            }
+        }
         Column(
             modifier = Modifier
                 .padding(innerPadding)
@@ -64,37 +88,33 @@ fun MainView() {
 
 }
 
+
 @Composable
 @Preview(showBackground = true)
 fun MainViewPreview() {
-    MainView()
+    // Use sample data for preview instead of ViewModel
+    val sampleNotes = listOf(
+        NoteEntity(
+            id = 1,
+            title = "Sample Note Title",
+            content = "This is a sample note content for preview purposes.",
+            timeStamp = System.currentTimeMillis()
+        ),
+        NoteEntity(
+            id = 2,
+            title = "Another Note",
+            content = "More sample content to demonstrate the preview.",
+            timeStamp = System.currentTimeMillis()
+        )
+    )
+    MainView(notes = sampleNotes)
 
 
 }
 
 
 @Composable
-fun MainTitle() {
-    Text(text = "Your Mind")
-
-}
-
-@Composable
-fun NoteCard(note: NoteViewModel ) {
-
-
-
-
-
-    LazyColumn() {
-
-        items(note.notes.collectAsState().value){
-            nota ->
-
-        }
-
-    }
-
+fun NoteCard(title: String, content: String, date: String) {
     Column(
         modifier = Modifier
             .padding(16.dp)
@@ -104,26 +124,26 @@ fun NoteCard(note: NoteViewModel ) {
 
     ) {
         Text(
-            text = noteTitle,
+            text = title,
             style = MaterialTheme.typography.titleLarge,
             overflow = TextOverflow.Ellipsis,
             maxLines = 1
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = noteContent,
+            text = content,
             style = MaterialTheme.typography.bodyMedium,
             overflow = TextOverflow.Ellipsis,
             maxLines = 3
         )
         Spacer(modifier = Modifier.height(8.dp))
-        Box (
+        Box(
             modifier = Modifier.fillMaxWidth(),
             contentAlignment = Alignment.CenterEnd
 
         ) {
             Text(
-                text = noteDate,
+                text = date,
                 style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Right
             )
