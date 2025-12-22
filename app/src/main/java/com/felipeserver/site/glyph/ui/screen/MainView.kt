@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.DockedSearchBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
@@ -85,12 +86,16 @@ fun MainView(notes: List<NoteEntity> = emptyList(), navController: NavController
                     )
                 }, scrollBehavior = scrollBehavior
             )
+
         },
         bottomBar = {
             BottomAppBar(
 
-            ) { }
+            ) {
+
+            }
         }) { innerPadding ->
+
         LazyColumn(
             modifier = Modifier.padding(innerPadding)
         ) {
@@ -154,63 +159,7 @@ fun NoteCard(
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun SearchBar(viewModel: NoteViewModel = viewModel()) {
-    var searchQuery by remember { mutableStateOf("") }
-    val notes by viewModel.notes.collectAsState()
 
-    var active by remember { mutableStateOf(false) }
-    val filteredItems = notes.filter {
-                it.title.contains(searchQuery, ignoreCase = true) ||
-                it.content.contains(searchQuery, ignoreCase = true)
-    }
-    SearchBar(
-        query = searchQuery,
-        onQueryChange = {
-            searchQuery = it
-        },
-        onSearch = {
-            active = false
-        },
-        active = active,
-        onActiveChange = {
-            active = it
-        },
-        modifier = Modifier
-            .padding(start = 12.dp, top = 2.dp, end = 12.dp, bottom = 12.dp)
-            .fillMaxWidth(),
-
-        placeholder = { Text("Search") },
-
-        leadingIcon = {
-            Icon(
-                imageVector = Icons.Rounded.Search,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        },
-        trailingIcon = {
-            if (active)
-                Icon(
-                    imageVector = Icons.Rounded.Close,
-                    contentDescription = null
-                )
-        },
-        colors = SearchBarDefaults.colors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        ),
-        tonalElevation = 0.dp,
-    ) {
-
-        //Search content here
-
-        filteredItems.forEach{ item->
-            Text(text = item.title, fontSize = 12.sp)
-        }
-    }
-
-}
 
 
 @Composable
@@ -240,66 +189,4 @@ fun NoteCardPreview() {
     )
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-@Preview(showBackground = true)
-fun SearchBarPreview() {
-    val sampleNotes = (1..5).map {
-        NoteEntity(
-            id = it,
-            title = "Sample Note Title $it",
-            content = "This is a sample note content for preview purposes.",
-            timeStamp = System.currentTimeMillis()
-        )
-    }
-    var searchQuery by remember { mutableStateOf("") }
-    var active by remember { mutableStateOf(false) }
-    val filteredItems = sampleNotes.filter {
-        it.title.contains(searchQuery, ignoreCase = true) ||
-                it.content.contains(searchQuery, ignoreCase = true)
-    }
 
-    SearchBar(
-        query = searchQuery,
-        onQueryChange = {
-            searchQuery = it
-        },
-        onSearch = {
-            active = false
-        },
-        active = active,
-        onActiveChange = {
-            active = it
-        },
-        modifier = Modifier
-            .padding(start = 12.dp, top = 2.dp, end = 12.dp, bottom = 12.dp)
-            .fillMaxWidth(),
-
-        placeholder = { Text("Search") },
-
-        leadingIcon = {
-            Icon(
-                imageVector = Icons.Rounded.Search,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        },
-        trailingIcon = {
-            if (active)
-                Icon(
-                    imageVector = Icons.Rounded.Close,
-                    contentDescription = null
-                )
-        },
-        colors = SearchBarDefaults.colors(
-            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        ),
-        tonalElevation = 0.dp,
-    ) {
-
-        //Search content here
-        filteredItems.forEach { item ->
-            Text(text = item.title, fontSize = 12.sp, modifier = Modifier.padding(8.dp))
-        }
-    }
-}

@@ -24,5 +24,7 @@ interface NoteDao {
     @Query("SELECT * FROM notes WHERE id = :id")
     fun getNoteById(id: Int): Flow<NoteEntity>
 
-
+    @Query("SELECT * FROM notes WHERE title LIKE '%' || :query || '%' OR content LIKE '%' || :query || '%'")
+    fun getNoteBySearch(query: String): Flow<NoteEntity>
 }
+

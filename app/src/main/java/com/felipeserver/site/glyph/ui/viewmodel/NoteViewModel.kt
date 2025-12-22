@@ -27,6 +27,7 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
 
     // Private mutable state flow for the UI state
     private val _uiState = MutableStateFlow(NoteUiState())
+
     // Public immutable state flow for observing the UI state
     val uiState = _uiState.asStateFlow()
 
@@ -40,6 +41,23 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
     fun getNoteById(id: Int) {
         viewModelScope.launch {
             dao.getNoteById(id).collect { note ->
+                if (note != null) {
+                    _uiState.update { currentState ->
+                        currentState.copy(
+                            id = note.id,
+                            title = note.title,
+                            content = note.content,
+                            isNewNote = false
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    fun getNoteBySearch(query: String) {
+        viewModelScope.launch {
+            dao.getNoteBySearch(query).collect { note ->
                 if (note != null) {
                     _uiState.update { currentState ->
                         currentState.copy(
