@@ -26,5 +26,8 @@ interface NoteDao {
 
     @Query("SELECT * FROM notes WHERE title LIKE '%' || :query || '%' OR content LIKE '%' || :query || '%'")
     fun getNoteBySearch(query: String): Flow<NoteEntity>
+
+    @Query("SELECT id FROM notes ORDER BY id DESC LIMIT 1")
+    fun getLastNoteId(): Int
 }
 
