@@ -4,27 +4,34 @@ import android.content.res.Configuration
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.BottomAppBarDefaults
 import androidx.compose.material3.DockedSearchBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
@@ -60,6 +67,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.felipeserver.site.glyph.R
 import com.felipeserver.site.glyph.data.local.NoteEntity
+import com.felipeserver.site.glyph.data.local.NoteWithTags
+import com.felipeserver.site.glyph.data.local.TagEntity
 import com.felipeserver.site.glyph.navigation.Screen
 import com.felipeserver.site.glyph.ui.theme.GlyphTheme
 import com.felipeserver.site.glyph.ui.viewmodel.NoteViewModel
@@ -71,10 +80,12 @@ import java.time.format.DateTimeFormatter
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainViewScreen(navController: NavController, viewModel: NoteViewModel = viewModel()) {
-    val notes by viewModel.notes.collectAsState()
+    val notesWithTags by viewModel.notesWithTags.collectAsState()
+    val allTags by viewModel.allTags.collectAsState()
     val scope = rememberCoroutineScope()
     MainView(
-        notes = notes,
+        notes = notesWithTags,
+        tags = allTags,
         navController = navController,
         onFabClick = {
             scope.launch {
@@ -90,10 +101,15 @@ fun MainViewScreen(navController: NavController, viewModel: NoteViewModel = view
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class, ExperimentalFoundationApi::class)
+@OptIn(
+    ExperimentalMaterial3Api::class,
+    ExperimentalMaterial3ExpressiveApi::class,
+    ExperimentalFoundationApi::class
+)
 @Composable
 fun MainView(
-    notes: List<NoteEntity> = emptyList(),
+    notes: List<NoteWithTags> = emptyList(),
+    tags: List<TagEntity> = emptyList(),
     navController: NavController? = null,
     onFabClick: () -> Unit,
     onDeleteNote: (NoteEntity) -> Unit
@@ -110,16 +126,29 @@ fun MainView(
     val bottomScrollBehavior = BottomAppBarDefaults.exitAlwaysScrollBehavior()
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var active by rememberSaveable { mutableStateOf(false) }
+    var selectedTags by remember { mutableStateOf<Set<TagEntity>>(emptySet()) }
 
-    val filteredNotes = if (searchQuery.isEmpty()) {
-        notes
-    } else {
-        notes.filter { note ->
-            note.title.contains(searchQuery, ignoreCase = true)
-                    ||
-                    note.content.contains(searchQuery, ignoreCase = true)
-        }.sortedByDescending { it.timeStamp }
+    val filteredNotes = remember(notes, searchQuery, selectedTags) {
+        val textFiltered = if (searchQuery.isEmpty()) {
+            notes
+        } else {
+            notes.filter { noteWithTags ->
+                noteWithTags.note.title.contains(searchQuery, ignoreCase = true)
+                        ||
+                        noteWithTags.note.content.contains(searchQuery, ignoreCase = true)
+            }
+        }
+
+        if (selectedTags.isEmpty()) {
+            textFiltered
+        } else {
+            textFiltered.filter { noteWithTags ->
+                val noteTagIds = noteWithTags.tags.map { it.tagId }.toSet()
+                selectedTags.all { selectedTag -> noteTagIds.contains(selectedTag.tagId) }
+            }
+        }
     }
+
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
@@ -202,57 +231,90 @@ fun MainView(
                 }
             }
         }) { innerPadding ->
-
-        LazyColumn(
-            contentPadding = innerPadding
-        ) {
-            items(
-                items = filteredNotes,
-                key = { note -> note.id }
-            ) { individualNote ->
-                val dismissState = rememberSwipeToDismissBoxState(
-                    confirmValueChange = {
-                        if (it == SwipeToDismissBoxValue.EndToStart) {
-                            onDeleteNote(individualNote)
-                            true // Confirma a dispensa
-                        } else {
-                            false
+        Column(Modifier.padding(innerPadding)) {
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(tags) { tag ->
+                    val isSelected = selectedTags.contains(tag)
+                    NoteChips(
+                        label = tag.name,
+                        isSelected = isSelected,
+                        onSelectedChange = {
+                            selectedTags = if (isSelected) {
+                                selectedTags - tag
+                            } else {
+                                selectedTags + tag
+                            }
                         }
-                    }
-                )
-
-                SwipeToDismissBox(
-                    modifier = Modifier.animateItem(),
-                    state = dismissState,
-                    backgroundContent = {
-                        val color = MaterialTheme.colorScheme.errorContainer
-                        val icon = Icons.Default.Delete
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(color)
-                                .padding(horizontal = 16.dp),
-                            contentAlignment = Alignment.CenterEnd
-                        ) {
-                            Icon(
-                                imageVector = icon,
-                                contentDescription = "Excluir nota"
-                            )
-                        }
-
-                    },
-                    enableDismissFromEndToStart = true,
-                    enableDismissFromStartToEnd = false
-                ) {
-                    NoteCard(
-                        title = individualNote.title,
-                        content = individualNote.content,
-                        date = individualNote.timeStamp,
-                        navController = navController,
-                        id = individualNote.id
                     )
                 }
+            }
+            LazyColumn {
+                items(
+                    items = filteredNotes,
+                    key = { noteWithTags -> noteWithTags.note.id }
+                ) { individualNoteWithTags ->
+                    val dismissState = rememberSwipeToDismissBoxState(
+                        confirmValueChange = {
+                            if (it == SwipeToDismissBoxValue.EndToStart) {
+                                onDeleteNote(individualNoteWithTags.note)
+                                true 
+                            } else {
+                                false
+                            }
+                        }
+                    )
+                    
+                    SwipeToDismissBox(
+                        modifier = Modifier.animateItem(),
+                        state = dismissState,
+                        backgroundContent = {
+                            val color = when (dismissState.targetValue) {
+                                SwipeToDismissBoxValue.Settled -> Color.Transparent
+                                else -> MaterialTheme.colorScheme.errorContainer
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(color)
+                                    .padding(horizontal = 16.dp),
+                                contentAlignment = Alignment.CenterEnd
+                            ) {
+                                if (color != Color.Transparent) {
+                                    IconButton(
+                                        onClick = {
+                                            // Ao clicar, a exclusão é chamada, mas o confirmValueChange
+                                            // já faria isso se o deslize fosse até o fim.
+                                            // Para manter o comportamento de exclusão por swipe completo:
+                                            onDeleteNote(individualNoteWithTags.note)
+                                        },
+                                        modifier = Modifier.size(48.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "Excluir nota",
+                                            tint = MaterialTheme.colorScheme.onErrorContainer
+                                        )
+                                    }
+                                }
+                            }
+                        },
+                        enableDismissFromEndToStart = true,
+                        enableDismissFromStartToEnd = false
+                    ) {
+                        NoteCard(
+                            title = individualNoteWithTags.note.title,
+                            content = individualNoteWithTags.note.content,
+                            date = individualNoteWithTags.note.timeStamp,
+                            navController = navController,
+                            id = individualNoteWithTags.note.id
+                        )
+                    }
 
+                }
             }
         }
     }
@@ -269,54 +331,91 @@ fun NoteCard(
             .format(date)
     }
 
-Surface(
-    tonalElevation = 16.dp
-){
-    Box(
-
-        modifier = Modifier
-            .clickable(
-                onClick = {
-                    navController?.navigate(Screen.Note.withArgs(id.toString()))
-                })
-            .background(MaterialTheme.colorScheme.surface)
-
+    Surface(
+        tonalElevation = 16.dp,
+        shape = RoundedCornerShape(8.dp),
+        modifier = Modifier.padding(8.dp)
     ) {
-        Column(
+        Box(
+
             modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth()
-                .height(100.dp)
+                .clickable(
+                    onClick = {
+                        navController?.navigate(Screen.Note.withArgs(id.toString()))
+                    })
+
 
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge,
-                overflow = TextOverflow.Ellipsis,
-                maxLines = 1
-
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = content,
-                style = MaterialTheme.typography.bodyMedium,
-                overflow = TextOverflow.Ellipsis,
-                maxLines = 1
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Box(
-                modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth()
+                    .height(100.dp)
 
             ) {
                 Text(
-                    text = formattedDate,
-                    style = MaterialTheme.typography.bodySmall,
-                    textAlign = TextAlign.Right
+                    text = title,
+                    style = MaterialTheme.typography.titleLarge,
+                    overflow = TextOverflow.Ellipsis,
+                    maxLines = 1
+
                 )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = content,
+                    style = MaterialTheme.typography.bodyMedium,
+                    overflow = TextOverflow.Ellipsis,
+                    maxLines = 1
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Box(
+                    modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd
+
+                ) {
+                    Text(
+                        text = formattedDate,
+                        style = MaterialTheme.typography.bodySmall,
+                        textAlign = TextAlign.Right
+                    )
+                }
             }
         }
     }
 }
+
+@Composable
+fun NoteChips(label: String, isSelected: Boolean, onSelectedChange: () -> Unit) {
+    FilterChip(
+        onClick = onSelectedChange,
+        label = { Text(label) },
+        selected = isSelected,
+        colors = FilterChipDefaults.filterChipColors(
+            selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+            selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            selectedLeadingIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        ),
+        elevation = FilterChipDefaults.filterChipElevation(
+            elevation = 2.dp,
+            pressedElevation = 4.dp
+        ),
+        leadingIcon = if (isSelected) {
+            {
+                Icon(
+                    imageVector = Icons.Filled.Done,
+                    contentDescription = "Filtro Ativo",
+                    modifier = Modifier.size(FilterChipDefaults.IconSize)
+                )
+            }
+        } else {
+            null
+        }
+    )
+}
+
+@Preview
+@Composable
+fun NoteChipsPreview() {
+    NoteChips("Teste", true, {})
 }
 
 @Composable
@@ -327,25 +426,19 @@ fun MainViewPreview() {
             NoteEntity(
                 id = it,
                 title = "Sample Note Title $it",
-                content = "This is a sample note content for preview purposes.",
+                content = "This is sample content for note $it",
                 timeStamp = Instant.now()
             )
         }
-        MainView(notes = sampleNotes, onFabClick = {}, onDeleteNote = {})
-    }
-
-}
-
-
-@Composable
-@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
-fun NoteCardPreview() {
-    GlyphTheme {
-        NoteCard(
-            "Neque porro quisquam est qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit",
-            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris finibus, odio ac mattis fermentum, elit erat condimentum nibh, vitae suscipit nunc purus ut diam. Vivamus fermentum purus enim, vel molestie justo feugiat et. Nam dignissim nunc vitae tristique posuere. Sed egestas turpis neque. Aenean elit metus, auctor id erat sit amet, feugiat cursus diam. In hac habitasse platea dictumst. Praesent vitae sollicitudin lacus. Sed in magna lobortis, euismod risus sed, luctus lacus. Morbi eu ligula convallis, convallis ex at, rutrum urna. Vivamus felis purus, sollicitudin in ullamcorper in, bibendum vel erat. Duis et quam in nisl tristique lacinia. Vestibulum aliquet tortor ac ex hendrerit vehicula.",
-            date = Instant.now(),
-            id = 1
+        val sampleTags = listOf(TagEntity(tagId = 1, name = "Life"), TagEntity(tagId = 2, name = "Work"))
+        val sampleNotesWithTags = sampleNotes.map {
+            NoteWithTags(note = it, tags = if (it.id % 2 == 0) listOf(sampleTags[0]) else listOf(sampleTags[1]))
+        }
+        MainView(
+            notes = sampleNotesWithTags,
+            tags = sampleTags,
+            onFabClick = {},
+            onDeleteNote = {}
         )
     }
 }

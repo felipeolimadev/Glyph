@@ -5,6 +5,10 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.felipeserver.site.glyph.data.local.NoteDatabase
 import com.felipeserver.site.glyph.data.local.NoteEntity
+import com.felipeserver.site.glyph.data.local.NoteTagCrossRef
+import com.felipeserver.site.glyph.data.local.NoteWithTags
+import com.felipeserver.site.glyph.data.local.TagEntity
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -14,58 +18,45 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Instant
 
-// Data class to represent the UI state for the NoteView
 data class NoteUiState(
     val id: Int = 0,
     val title: String = "",
     val content: String = "",
+    val tags: List<TagEntity> = emptyList(),
     val isNewNote: Boolean = true
 )
 
 class NoteViewModel(application: Application) : AndroidViewModel(application) {
 
-
     private val dao = NoteDatabase.getDatabase(application).noteDao()
 
-
     private val _uiState = MutableStateFlow(NoteUiState())
+    val uiState: StateFlow<NoteUiState> = _uiState.asStateFlow()
 
-
-    val uiState = _uiState.asStateFlow()
-
-    val notes: StateFlow<List<NoteEntity>> = dao.getAllNotes()
+    val notesWithTags: StateFlow<List<NoteWithTags>> = dao.getNotesWithTags()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
 
-    fun getNoteById(id: Int) {
-        viewModelScope.launch {
-            dao.getNoteById(id).collect { note ->
-                if (note != null) {
-                    _uiState.update { currentState ->
-                        currentState.copy(
-                            id = note.id,
-                            title = note.title,
-                            content = note.content,
-                            isNewNote = false
-                        )
-                    }
-                }
-            }
-        }
-    }
+    val allTags: StateFlow<List<TagEntity>> = dao.getAllTags()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
 
-    fun getNoteBySearch(query: String) {
+    fun getNoteWithTags(id: Int) {
         viewModelScope.launch {
-            dao.getNoteBySearch(query).collect { note ->
-                if (note != null) {
-                    _uiState.update { currentState ->
-                        currentState.copy(
-                            id = note.id,
-                            title = note.title,
-                            content = note.content,
+            dao.getNoteWithTags(id).collect { noteWithTags ->
+                if (noteWithTags != null) {
+                    _uiState.update {
+                        it.copy(
+                            id = noteWithTags.note.id,
+                            title = noteWithTags.note.title,
+                            content = noteWithTags.note.content,
+                            tags = noteWithTags.tags,
                             isNewNote = false
                         )
                     }
@@ -82,23 +73,27 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(content = content) }
     }
 
-    suspend fun getLastNoteId(): Int? {
-        return dao.getLastNoteId()
-    }
-
     fun saveNote() {
         viewModelScope.launch {
             val currentNoteState = _uiState.value
             val noteEntity = NoteEntity(
-                id = if (currentNoteState.isNewNote) 0 else currentNoteState.id, // Room handles ID for new entries
+                id = if (currentNoteState.isNewNote) 0 else currentNoteState.id,
                 title = currentNoteState.title,
                 content = currentNoteState.content,
                 timeStamp = Instant.now()
             )
-            if (currentNoteState.isNewNote) {
+
+            val noteId = if (currentNoteState.isNewNote) {
                 dao.insertNote(noteEntity)
             } else {
                 dao.updateNote(noteEntity)
+                noteEntity.id.toLong()
+            }
+
+            // Update tags for the note
+            dao.removeAllTagsFromNote(noteId.toInt())
+            currentNoteState.tags.forEach { tag ->
+                dao.addTagToNote(NoteTagCrossRef(noteId.toInt(), tag.tagId))
             }
         }
     }
@@ -107,5 +102,45 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             dao.deleteNote(note)
         }
+    }
+
+    // --- Tag Management ---
+
+    fun createTag(tagName: String) {
+        viewModelScope.launch {
+            val newTag = TagEntity(name = tagName)
+            dao.insertTag(newTag)
+        }
+    }
+
+    fun addTagToCurrentNote(tag: TagEntity) {
+        _uiState.update { currentState ->
+            if (currentState.tags.any { it.tagId == tag.tagId }) {
+                currentState // Tag already exists, do nothing
+            } else {
+                currentState.copy(tags = currentState.tags + tag)
+            }
+        }
+    }
+
+    fun removeTagFromCurrentNote(tag: TagEntity) {
+        _uiState.update { currentState ->
+            currentState.copy(tags = currentState.tags.filter { it.tagId != tag.tagId })
+        }
+    }
+
+    fun updateTag(tag: TagEntity) {
+        viewModelScope.launch {
+            dao.updateTag(tag)
+        }
+    }
+
+    fun deleteTag(tag: TagEntity) {
+        viewModelScope.launch {
+            dao.deleteTag(tag)
+        }
+    }
+     suspend fun getLastNoteId(): Int? {
+        return dao.getLastNoteId()
     }
 }
