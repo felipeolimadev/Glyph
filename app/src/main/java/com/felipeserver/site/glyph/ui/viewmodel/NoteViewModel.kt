@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Instant
 
 // Data class to represent the UI state for the NoteView
 data class NoteUiState(
@@ -23,12 +24,13 @@ data class NoteUiState(
 
 class NoteViewModel(application: Application) : AndroidViewModel(application) {
 
+
     private val dao = NoteDatabase.getDatabase(application).noteDao()
 
-    // Private mutable state flow for the UI state
+
     private val _uiState = MutableStateFlow(NoteUiState())
 
-    // Public immutable state flow for observing the UI state
+
     val uiState = _uiState.asStateFlow()
 
     val notes: StateFlow<List<NoteEntity>> = dao.getAllNotes()
@@ -80,6 +82,10 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
         _uiState.update { it.copy(content = content) }
     }
 
+    suspend fun getLastNoteId(): Int? {
+        return dao.getLastNoteId()
+    }
+
     fun saveNote() {
         viewModelScope.launch {
             val currentNoteState = _uiState.value
@@ -87,13 +93,19 @@ class NoteViewModel(application: Application) : AndroidViewModel(application) {
                 id = if (currentNoteState.isNewNote) 0 else currentNoteState.id, // Room handles ID for new entries
                 title = currentNoteState.title,
                 content = currentNoteState.content,
-                timeStamp = System.currentTimeMillis()
+                timeStamp = Instant.now()
             )
             if (currentNoteState.isNewNote) {
                 dao.insertNote(noteEntity)
             } else {
                 dao.updateNote(noteEntity)
             }
+        }
+    }
+
+    fun deleteNote(note: NoteEntity) {
+        viewModelScope.launch {
+            dao.deleteNote(note)
         }
     }
 }

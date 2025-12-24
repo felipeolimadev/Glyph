@@ -18,16 +18,19 @@ interface NoteDao {
     @Delete
     suspend fun deleteNote(note: NoteEntity)
 
-    @Query("SELECT * FROM notes")
+    @Query("SELECT * FROM notes ORDER BY timeStamp DESC")
     fun getAllNotes(): Flow<List<NoteEntity>>
 
     @Query("SELECT * FROM notes WHERE id = :id")
-    fun getNoteById(id: Int): Flow<NoteEntity>
+    fun getNoteById(id: Int): Flow<NoteEntity?>
 
-    @Query("SELECT * FROM notes WHERE title LIKE '%' || :query || '%' OR content LIKE '%' || :query || '%'")
-    fun getNoteBySearch(query: String): Flow<NoteEntity>
+    @Query("SELECT * FROM notes WHERE title LIKE '%' || :query || '%' OR content LIKE '%' || :query || '%' ")
+    fun getNoteBySearch(query: String): Flow<NoteEntity?>
 
     @Query("SELECT id FROM notes ORDER BY id DESC LIMIT 1")
-    fun getLastNoteId(): Int
+    suspend fun getLastNoteId(): Int?
+
+    @Query("DELETE FROM notes")
+    suspend fun deleteAll()
 }
 

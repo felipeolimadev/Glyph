@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Glyph</string>
+    <string name="add_note_cd">Add</string>
+    <string name="search_hint">Hinted search text</string>
+    <string name="clear_search_cd">Limpar busca</string>
+    <string name="date_format">dd/MM/yyyy HH:mm</string>
 </resources>

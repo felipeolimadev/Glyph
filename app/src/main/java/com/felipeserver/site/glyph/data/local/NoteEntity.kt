@@ -2,6 +2,7 @@ package com.felipeserver.site.glyph.data.local
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import java.time.Instant
 
 @Entity(tableName = "notes")
 data class NoteEntity(
@@ -9,5 +10,5 @@ data class NoteEntity(
     val id: Int = 0,
     val title: String,
     val content: String,
-    val timeStamp: Long
+    val timeStamp: Instant
 )
