@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,15 +20,19 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Label
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -53,9 +58,10 @@ import com.felipeserver.site.glyph.data.local.TagEntity
 import com.felipeserver.site.glyph.ui.theme.GlyphTheme
 import com.felipeserver.site.glyph.ui.viewmodel.NoteUiState
 import com.felipeserver.site.glyph.ui.viewmodel.NoteViewModel
-import com.mohamedrejeb.richeditor.model.rememberRichTextState
-import com.mohamedrejeb.richeditor.ui.material3.RichTextEditor
-val textEditorState = rememberRichTextState()
+import com.mikepenz.markdown.m3.Markdown
+import com.mikepenz.markdown.model.MarkdownPadding
+
+
 @Composable
 fun NoteView(id: String?, navController: NavController) {
 
@@ -92,7 +98,6 @@ fun NoteView(id: String?, navController: NavController) {
             navController.popBackStack()
         })
 }
-
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -132,8 +137,7 @@ fun NoteViewContent(
         AlertDialog(
             onDismissRequest = { tagToDelete = null },
             title = { Text("Excluir Tag") },
-            text = { Text("Tem certeza que deseja excluir a tag \"${tag.name}\"? Todas as notas que usam esta tag perderão a associação.") },
-            confirmButton = {
+            text = { Text("Tem certeza que deseja excluir a tag \"${tag.name}\"? Todas as notas que usam esta tag perderão a associação.") },            confirmButton = {
                 TextButton(onClick = {
                     onDeleteTag(tag)
                     tagToDelete = null
@@ -269,7 +273,25 @@ fun NoteViewContent(
         }
     }
 }
-
+@Composable
+fun NoteViewMD(content: String) {
+    Scaffold { innerPadding ->
+        Markdown(
+            content = content,
+            modifier = Modifier.padding(innerPadding)
+        )
+    }
+}
+@Preview(showSystemUi = true, showBackground = true)
+@Composable
+fun NoteViewMDPreview()
+{
+    GlyphTheme {
+        NoteViewMD(
+            content = "**Bold text**"
+        )
+    }
+}
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewTagDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
@@ -306,23 +328,7 @@ fun NewTagDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
 }
 
 
-@Composable
-fun RichTextCanvas(){
-    Column {
-        RichTextEditor(
-            state = textEditorState,
-            modifier = Modifier.fillMaxSize()
-        )
-    }
 
-}
-@Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
-@Composable
-fun RichTextCanvasPreview(){
-    GlyphTheme {
-        RichTextCanvas()
-    }
-}
 
 @Preview(showBackground = true, uiMode = Configuration.UI_MODE_NIGHT_YES)
 @Composable
